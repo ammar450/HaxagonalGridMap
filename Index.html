@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <title>Hexagonal Grid on Map using H3</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.js'></script>
+    <script src="https://unpkg.com/h3-js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/h3-js/4.0.0/h3-js.js"></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.6.1/mapbox-gl.css' rel='stylesheet' />
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+    </style>
+</head>
+<body>
+<div id='map'></div>
+<script>
+    //mapboxgl.accessToken = 'YOUR_MAPBOX_ACCESS_TOKEN'; // Replace with your Mapbox access token
+    mapboxgl.accessToken = 'pk.eyJ1Ijoib2xpZ2FzIiwiYSI6ImNscG81NGd0ajBzeWYya3F5NGg1ejRzMHAifQ.LHIi266Bo0loKzlbpscWPg';
+
+    var map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v11',
+        center: [-98.5795, 39.8283],
+        zoom: 6
+    });
+
+    function addHexagonalGrid() {
+        var bounds = map.getBounds();
+        // Define the resolution of the hex grid, smaller numbers mean larger hexagons
+        var resolution = 6; 
+
+        // Get the hexagons that intersect the map bounds
+        var hexagons = h3.polyfill([
+            [bounds.getSouthWest().lng, bounds.getSouthWest().lat],
+            [bounds.getNorthWest().lng, bounds.getNorthWest().lat],
+            [bounds.getNorthEast().lng, bounds.getNorthEast().lat],
+            [bounds.getSouthEast().lng, bounds.getSouthEast().lat]
+        ], resolution);
+
+        // Convert H3 indexes to GeoJSON
+        var hexagonPolygons = hexagons.map(h3Index => ({
+            type: 'Feature',
+            geometry: h3.h3ToGeoBoundary(h3Index, true),
+            properties: {}
+        }));
+
+        // Add the hexagon layer to the map
+        map.addSource('hexagon-source', {
+            'type': 'geojson',
+            'data': {
+                'type': 'FeatureCollection',
+                'features': hexagonPolygons
+            }
+        });
+
+        map.addLayer({
+            'id': 'hexagon-layer',
+            'type': 'fill',
+            'source': 'hexagon-source',
+            'layout': {},
+            'paint': {
+                'fill-color': '#f08',
+                'fill-opacity': 0.4
+            }
+        });
+    }
+
+    map.on('load', addHexagonalGrid);
+    map.on('moveend', addHexagonalGrid);
+    map.on('zoomend', addHexagonalGrid);
+</script>
+</body>
+</html>
